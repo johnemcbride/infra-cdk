@@ -72,6 +72,10 @@ export class InfraCdkStack extends Stack {
 			// Install docker + compose plugin (Amazon Linux 2023)
 			'dnf update -y',
 			'dnf install -y docker git unzip',
+			'DOCKER_CONFIG=${DOCKER_CONFIG:-/usr/libexec/docker}',
+			'mkdir -p $DOCKER_CONFIG/cli-plugins',
+			'curl -SL https://github.com/docker/compose/releases/download/v2.27.1/docker-compose-linux-aarch64 -o $DOCKER_CONFIG/cli-plugins/docker-compose',
+			'chmod +x $DOCKER_CONFIG/cli-plugins/docker-compose',
 			'systemctl enable --now docker',
 			// Fetch compose bundle key from SSM
 			`COMPOSE_KEY=$(aws ssm get-parameter --name ${composeKeyParam.parameterName} --query 'Parameter.Value' --output text --region ${this.region})`,
@@ -83,8 +87,12 @@ export class InfraCdkStack extends Stack {
 			'cat >/usr/local/bin/spot-drain.sh <<EOF\n' +
 			'#!/usr/bin/env bash\n' +
 			'set -euo pipefail\n' +
-			'URL=http://169.254.169.254/latest/meta-data/spot/instance-action\n' +
+			'URL="http://169.254.169.254/latest/meta-data/spot/instance-action"\n' +
+			'export URL\n' +
 			'while sleep 5; do\n' +
+			'  if [ -z "$URL" ]; then\n' +
+			'    URL="http://169.254.169.254/latest/meta-data/spot/instance-action"\n' +
+			'  fi\n' +
 			'  if curl -sf $URL >/dev/null; then\n' +
 			'    echo "[spot] interruption notice received; stopping containers..." | systemd-cat -t spot\n' +
 			'    docker compose -f /opt/platform/compose.yml down\n' +
@@ -103,7 +111,7 @@ export class InfraCdkStack extends Stack {
 			       launchTemplateName: 'PlatformLaunchTemplate',
 		       launchTemplateData: {
 			       imageId: ec2.MachineImage.latestAmazonLinux2023({ cpuType: ec2.AmazonLinuxCpuType.ARM_64 }).getImage(this).imageId,
-			       instanceType: 'c7g.medium',
+			       instanceType: 'c7g.small',
 			       iamInstanceProfile: {
 				       arn: instanceProfile.attrArn
 			       },
