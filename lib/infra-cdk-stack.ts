@@ -111,7 +111,7 @@ export class InfraCdkStack extends Stack {
 			       launchTemplateName: 'PlatformLaunchTemplate',
 		       launchTemplateData: {
 			       imageId: ec2.MachineImage.latestAmazonLinux2023({ cpuType: ec2.AmazonLinuxCpuType.ARM_64 }).getImage(this).imageId,
-			       instanceType: 'c7g.small',
+			       instanceType: 't4g.small',
 			       iamInstanceProfile: {
 				       arn: instanceProfile.attrArn
 			       },
@@ -134,9 +134,8 @@ export class InfraCdkStack extends Stack {
 							version: lt.attrLatestVersionNumber
 						},
 			       overrides: [
-				       { instanceType: 'c7g.medium' },
-				       { instanceType: 'm7g.medium' },
-				       { instanceType: 'r7g.medium' }
+				       { instanceType: 't4g.small' },
+				       { instanceType: 'm8g.medium' }
 			       ]
 					},
 					instancesDistribution: {
